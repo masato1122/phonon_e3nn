@@ -4,9 +4,14 @@ WORKDIR=$(cd $(dirname $0); pwd)
 #target=kspec_norm_freq; label="sp"
 target=kcumu_norm_mfp; label="cu"
 
-#nprocs=1
+file_data=../../1_get/data_all5.csv
 
-file_data=../../1_get/data_all4.csv
+if [ $# -ge 1 ]; then
+    id=$1
+else
+    echo -n "Input ID: "
+    read id
+fi
 
 num_epochs=1000
 nloop=1
@@ -14,16 +19,17 @@ num_epochs_limit=1000
 patience=50
 
 ###################
-id=0
-batch=32
-lr=0.02
+##id=20
+#
+lr=0.002
+gamma=0.95
 lr_min=0.0005
 #
+batch=32
 weight_decay=0.03
-gamma=0.93
 ###################
 
-for seed in `seq 1 20`; do
+for seed in `seq 1 5`; do
 for num_data in -1 3000 1000 300 100; do
 
 if [ $num_data -lt 1001 ]; then
