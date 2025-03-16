@@ -128,7 +128,7 @@ def main(options):
         weight_decay=options.weight_decay,
         gamma=options.gamma,
         grad_weight=alpha,
-        optimizer='adam',
+        optimizer=options.optimizer.lower(),
         )
 
 
@@ -204,6 +204,10 @@ if __name__ == '__main__':
                             "Small gamma: slow decay, Large gamma: fast decay. "
                             "Both may be effective for avoiding overfitting."
                             ))
+    
+    parser.add_argument('--optimizer', dest='optimizer', type=str,
+                       default='adam', 
+                       help="optimizer (adam or adamw) [adam]]")
     
     args = parser.parse_args()
 
