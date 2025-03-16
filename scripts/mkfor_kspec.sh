@@ -4,7 +4,7 @@ WORKDIR=$(cd $(dirname $0); pwd)
 target=kspec_norm_freq; label="sp"
 #target=kcumu_norm_mfp; label="cu"
 
-nprocs=1
+#nprocs=1
 
 file_data=../../1_get/data_all4.csv
 
@@ -14,25 +14,23 @@ num_epochs_limit=1000
 patience=50
 
 ###################
-id=18
-#
+id=0
 batch=32
-lr=0.001
+lr=0.02
+lr_min=0.0005
+#
 weight_decay=0.03
 gamma=0.93
 ###################
 
 for seed in `seq 1 20`; do
 for num_data in -1 3000 1000 300 100; do
-#for num_data in -1 3000; do
 
-    #if [ $num_data -lt 301 ]; then
-    #    batch=32; lr=0.05
-    #elif [ $num_data == "1000" ]; then
-    #    batch=32; lr=0.03
-    #elif [ $num_data == "3000" ]; then
-    #    batch=32; lr=0.02
-    #fi
+if [ $num_data -lt 1001 ]; then
+    nprocs=4
+else
+    nprocs=1
+fi
 
 jobname=j${label}${id}_${num_data}-${seed}
 
@@ -55,14 +53,7 @@ outdir=./out_N\${num_data}/seed\${seed}
 
 for i in \`seq 1 $nloop\`; do
     
-    #lr=\`echo "0.005 - 0.0001 * \$i" | bc -l\`
-    #
-    #if [ \$lr -lt 0.0001 ]; then
-    #    lr=0.002
-    #fi
-    #echo "lr = \${lr}"
-    
-    python ../run_prediction.py \\
+    python ../phonon_e3nn/tools/run_prediction.py \\
         --file_data $file_data \\
         --num_data  $num_data \\
         --outdir    \$outdir \\
@@ -75,14 +66,13 @@ for i in \`seq 1 $nloop\`; do
         --nprocs   ${nprocs} \\
         --batch_size   $batch \\
         --lr           $lr \\
+        --lr_min       $lr_min \\
         --weight_decay $weight_decay \\
         --gamma        $gamma 
-    
     
 done
 EOF
 qsub $OFILE; sleep 0.1
-#exit
 done
 done
 
