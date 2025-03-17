@@ -73,7 +73,7 @@ def write_scaling_formula(ax, popt, pos=(0.05, 0.05), fontsize=7, ha='left', va=
     ax.text(pos[0], pos[1], line, fontsize=fontsize,
             transform=ax.transAxes, ha=ha, va=va,
             bbox=dict(facecolor='white', alpha=0.8, 
-                      edgecolor='none', pad=1))
+                      edgecolor='none', pad=1.5))
 
 def plot_scaling_law(
     ax, xdat, ydat, color='grey', lw=3, alpha=0.5,
