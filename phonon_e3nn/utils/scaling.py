@@ -72,7 +72,7 @@ def write_scaling_formula(ax, popt, pos=(0.05, 0.05), fontsize=7, ha='left', va=
     line = "${\\rm MAE = (10^{%.2f} / N_{train})^{%.3f}}$" % tuple(popt[::-1])
     ax.text(pos[0], pos[1], line, fontsize=fontsize,
             transform=ax.transAxes, ha=ha, va=va,
-            bbox=dict(facecolor='white', alpha=0.5, 
+            bbox=dict(facecolor='white', alpha=0.8, 
                       edgecolor='none', pad=1))
 
 def plot_scaling_law(
