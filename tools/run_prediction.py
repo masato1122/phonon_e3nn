@@ -212,6 +212,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     ## Save parameters
+    os.makedirs(args.outdir, exist_ok=True)
     file_params = os.path.join(args.outdir, 'params.txt')
     with open(file_params, 'w') as f:
         for key, value in vars(args).items():
