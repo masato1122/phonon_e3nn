@@ -180,10 +180,12 @@ if __name__ == '__main__':
                         default=0.0, 
                         help="weight for monotonicity penalty for kcumu [0.0]")
     
-    ### for parameter-dependent properties
-    ### lr = 0.001, weight_decay = 0.03, gamma = 0.96
-    ### for scaler
-    ### lr <= 0.01, weight_decay = 0.01, gamma = 0.96
+    ###
+    ### Recommended:
+    ### lr = 5.0 / N_all
+    ### lr_min = 1.5 / N_all
+    ### gamma = 0.95
+    ###
     parser.add_argument('--lr', dest='lr', type=float,
                        default=0.001, 
                        help=(
@@ -199,11 +201,7 @@ if __name__ == '__main__':
                             "weight decay (orig: 0.05, general: 0.01, 0.001) [0.03]. "
                             "Increase if overfitting."))
     parser.add_argument('--gamma', dest='gamma', type=float,
-                        default=0.96, help=(
-                            "gamma (orig: 0.96) [0.96] "
-                            "Small gamma: slow decay, Large gamma: fast decay. "
-                            "Both may be effective for avoiding overfitting."
-                            ))
+                        default=0.95, help="gamma [0.95]")
     
     parser.add_argument('--optimizer', dest='optimizer', type=str,
                        default='adam', 
