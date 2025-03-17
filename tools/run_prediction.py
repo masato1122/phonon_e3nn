@@ -210,6 +210,12 @@ if __name__ == '__main__':
                        help="optimizer (adam or adamw) [adam]]")
     
     args = parser.parse_args()
-
+    
+    ## Save parameters
+    file_params = os.path.join(args.outdir, 'params.txt')
+    with open(file_params, 'w') as f:
+        for key, value in vars(args).items():
+            f.write(f'{key:17s} : {value}\n')
+    
     main(args)
     
