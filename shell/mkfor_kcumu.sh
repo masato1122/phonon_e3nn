@@ -69,7 +69,7 @@ for i in \`seq 1 $nloop\`; do
     
     python ../phonon_e3nn/tools/run_prediction.py \\
         --file_data $file_data \\
-        --num_data  $num_data \\
+        --num_data  \$num_data \\
         --outdir    \$outdir \\
         --target    $target \\
         --seed      \$seed \\
