@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 do.sh
+shll
 
 # C extensions
 *.so
