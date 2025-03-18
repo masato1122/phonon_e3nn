@@ -1,3 +1,32 @@
+#
+# Original code: https://github.com/ninarina12/phononDoS_tutorial
+# Modified by M. Ohnishi
+# Modified on February 06, 2025
+#
+# The code is partially originated from https://github.com/ninarina12/phononDoS_tutorial
+# 
+# MIT License
+# 
+# Copyright (c) 2024 Masato Ohnishi at The Institute of Statistical Mathematics
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 import numpy as np
 import pandas as pd
 
@@ -188,7 +217,12 @@ def plot_element_representation(
     stats, idx_train, idx_valid, idx_test, datasets, species, 
     figname='fig_element_representation.png', 
     fig_width=6.0, aspect=0.5, fontsize=6, dpi=500, lw=0.8):
-
+    """ plot element representation in each dataset
+    
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
+    """
     # plot element representation in each dataset
     stats['train'] = stats['data'].map(lambda x: element_representation(x, np.sort(idx_train)))
     stats['valid'] = stats['data'].map(lambda x: element_representation(x, np.sort(idx_valid)))
@@ -240,6 +274,10 @@ def plot_loss_history(steps, loss_train, loss_valid,
 
 def get_lattice_parameters(df):
     """ lattice parameter statistics
+    
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
     """
     a = []
     for entry in df.itertuples():
@@ -251,8 +289,12 @@ def plot_structure(structure, figname='fig_structure.png',
                    fontsize=7, fig_width=2.5, aspect=0.9, dpi=300):
     """ Plot the structure of a given entry in the dataframe
     
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
     Args:
         structure (Atoms): ASE Atoms object representing the crystal structure
+    
     """
     from ase.visualize.plot import plot_atoms
     cmap = plt.get_cmap('terrain')
@@ -277,6 +319,10 @@ def plot_structure(structure, figname='fig_structure.png',
 def plot_lattice_parameters(
     df, figname='fig_lattice.png', fig_width=2.5, aspect=0.7, fontsize=7, dpi=300):
     """ plot lattice parameter statistics
+    
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
     """
     cmap = plt.get_cmap('tab10')
     a = get_lattice_parameters(df)
@@ -291,7 +337,6 @@ def plot_lattice_parameters(
     b = 0.
     bins = 50
     for i, (d, n) in enumerate(zip(['a', 'b', 'c'], [a[:,0], a[:,1], a[:,2]])):
-        # color = [int(c.lstrip('#')[i:i+2], 16)/255. for i in (0,2,4)]  ## original
         color = [cmap(i)[k] for k in range(3)]  ## adjusted
         y, bins, _, = ax.hist(n, bins=bins, fc=color+[0.7], ec=color, bottom=b, label=d,
                               linewidth=0.5)
@@ -303,12 +348,16 @@ def plot_lattice_parameters(
     print(' Output', figname)
     print('average lattice parameter (a/b/c):', a[:,0].mean(), '/', a[:,1].mean(), '/', a[:,2].mean())
 
-
 def plot_example(
     df, i=12, label_edges=False, 
     fontsize=6, fig_width=6.0, aspect=0.5, dpi=400, 
     figname='fig_example.png'):
-    """ plot an example crystal structure and graph """
+    """ plot an example crystal structure and graph 
+    
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
+    """
     
     cmap = plt.get_cmap('tab10')
     
@@ -373,3 +422,54 @@ def plot_example(
     print(' Output', figname)    
     return fig
 
+def visualize_layers(
+    model, figname='fig_model.png', 
+    fig_width=14, h_each=3.5, wspace=0.3, hspace=0.5,
+    dpi=300, fontsize=10):
+    """ Visualize the layers of the model
+    
+    Original code : https://github.com/ninarina12/phononDoS_tutorial
+    Modified by M. Ohnishi
+    
+    """
+    layer_dst = dict(zip(['sc', 'lin1', 'tp', 'lin2'], ['gate', 'tp', 'lin2', 'gate']))
+    try:
+        layers = model.mp.layers
+    except:
+        layers = model.layers
+
+    num_layers = len(layers)
+    num_ops = max([len([k for k in list(layers[i].first._modules.keys()) if k not in ['fc', 'alpha']])
+                   for i in range(num_layers-1)])
+    
+    set_matplot(fontsize=fontsize)
+    fig, ax = plt.subplots(num_layers, num_ops, figsize=(fig_width, h_each*num_layers))
+    fig.subplots_adjust(wspace=wspace, hspace=hspace)
+    
+    for i in range(num_layers - 1):
+        ops = layers[i].first._modules.copy()
+        ops.pop('fc', None); ops.pop('alpha', None)
+        for j, (k, v) in enumerate(ops.items()):
+            ax[i,j].set_title(k, fontsize=fontsize)
+            v.cpu().visualize(ax=ax[i,j])
+            ax[i,j].text(0.7, -0.15, '--> to ' + layer_dst[k], 
+                         fontsize=fontsize-2, transform=ax[i,j].transAxes)
+
+    layer_dst = dict(zip(['sc', 'lin1', 'tp', 'lin2'], ['output', 'tp', 'lin2', 'output']))
+    ops = layers[-1]._modules.copy()
+    ops.pop('fc', None); ops.pop('alpha', None)
+    for j, (k, v) in enumerate(ops.items()):
+        ax[-1,j].set_title(k, fontsize=fontsize)
+        v.cpu().visualize(ax=ax[-1,j])
+        ax[-1,j].text(0.7, -0.15,'--> to ' + layer_dst[k], 
+                      fontsize=fontsize-2, transform=ax[-1,j].transAxes)
+
+    ### adjust the fontsize
+    for i in range(len(ax)):
+        for j in range(len(ax[i])):
+            for text in ax[i,j].texts:
+                text.set_fontsize(fontsize)
+    
+    fig.savefig(figname, dpi=dpi, bbox_inches='tight')
+    print(" Output", figname)
+    return fig

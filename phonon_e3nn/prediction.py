@@ -1,13 +1,30 @@
-# -*- coding: utf-8 -*-
+#
+# Original code: https://github.com/ninarina12/phononDoS_tutorial
+# Modified by M. Ohnishi
+# Modified on February 06, 2025
 # 
-# title
+# MIT License
 # 
-# Description :
-# This script ...
+# Copyright (c) 2025 Masato Ohnishi at The Institute of Statistical Mathematics
 # 
-# Author      : M. Ohnishi
-# Created on  : February 06, 2025
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 # 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 import os
 import sys
 import glob
@@ -29,17 +46,11 @@ import numpy as np
 import pandas as pd
 
 # utilities
-import time
 from tqdm import tqdm
-from phonon_e3nn.utils.utils_data import (
-    set_seed, set_data, train_valid_test_split)
-    #plot_partials, colors
-
-from phonon_e3nn.utils.utils_model import Network, visualize_layers, train
-# from phonon_e3nn.utils.utils_plot import plotly_surface, plot_orbitals, get_middle_feats
-
+from phonon_e3nn.utils.utils_data import set_seed, set_data, train_valid_test_split
+from phonon_e3nn.utils.utils_model import Network, train
 from phonon_e3nn.utils.plotter import (
-    plot_lattice_parameters, plot_structure, plot_loss_history, plot_example)
+    plot_lattice_parameters, plot_structure, plot_loss_history, plot_example, visualize_layers)
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.jit._check")
@@ -74,8 +85,6 @@ def build_data(entry, type_encoding, type_onehot, am_onehot, r_max=5.):
         target = torch.tensor(entry.property).squeeze(-1)
     else:
         target = torch.from_numpy(np.asarray(entry.property)).unsqueeze(0)
-    
-    # phdos = torch.from_numpy(np.asarray(entry.phdos)).unsqueeze(0)
     
     data = tg.data.Data(
         pos=positions, 
@@ -117,18 +126,6 @@ def get_neighbors(df, idx):
             n.append(len((entry.data.edge_index[0] == i).nonzero()))
     return np.array(n)
 
-# def plot_example(df, n_train, n_valid, n_test, idx=12, label_edges=False):    
-#     fig, ax = plt.subplots(1,1, figsize=(5,4))
-#     b = 0.
-#     bins = 50
-#     for (d, c), n in zip(colors.items(), [n_train, n_valid, n_test]):
-#         color = [int(c.lstrip('#')[idx:idx+2], 16)/255. for i in (0,2,4)]
-#         y, bins, _, = ax.hist(n, bins=bins, fc=color+[0.7], ec=color, bottom=b, label=d)
-#         b += y
-#     ax.set_xlabel('number of neighbors')
-#     ax.set_ylabel('number of examples')
-#     ax.legend(frameon=False)
-#     print('average number of neighbors (train/valid/test):', n_train.mean(), '/', n_valid.mean(), '/', n_test.mean())
 
 def _output_indices(indices, outdir='./data'):
     for key in indices.keys():
@@ -207,27 +204,27 @@ def make_model(out_dim, r_max=5.0, n_train=None, target=None):
     )
     return model
 
-class AdaptiveLoss:
-    def __init__(self, initial_a=0.001, min_a=1e-5, max_a=1.0, factor=0.1):
-        self.a = initial_a
-        self.min_a = min_a
-        self.max_a = max_a
-        self.prev_loss = None
-        self.factor = factor  # MSE の変化率に対する影響度
-    
-    def update_a(self, mse_loss):
-        if self.prev_loss is not None:
-            change = (self.prev_loss - mse_loss).item()
-            if change > 0:  # MSE が減少しているなら a を小さく
-                self.a = max(self.min_a, self.a * (1 - self.factor * change))
-            else:  # MSE が減らないなら a を増やす
-                self.a = min(self.max_a, self.a * (1 + self.factor * abs(change)))
-        self.prev_loss = mse_loss
+# class AdaptiveLoss:
+#     def __init__(self, initial_a=0.001, min_a=1e-5, max_a=1.0, factor=0.1):
+#         self.a = initial_a
+#         self.min_a = min_a
+#         self.max_a = max_a
+#         self.prev_loss = None
+#         self.factor = factor  # Impact on the rate of change of MSE
+#    
+#     def update_a(self, mse_loss):
+#         if self.prev_loss is not None:
+#             change = (self.prev_loss - mse_loss).item()
+#             if change > 0:  # If MSE is decreasing, reduce a.
+#                 self.a = max(self.min_a, self.a * (1 - self.factor * change))
+#             else:  # If MSE is not decreasing, increase a.
+#                 self.a = min(self.max_a, self.a * (1 + self.factor * abs(change)))
+#         self.prev_loss = mse_loss
     
 def monotonicity_penalty(predictions):
-    # 予測値の差分を計算
+    # Calculate the difference of predicted values
     diffs = predictions[:, 1:] - predictions[:, :-1]
-    # 差分が負の場合にペナルティを課す
+    # Impose a penalty when the difference is negative.
     penalty = torch.relu(-diffs).sum()
     # penalty = torch.mean(torch.square(torch.relu(-diffs)))
     return penalty
@@ -240,10 +237,10 @@ def custom_loss_function(predictions, targets, alpha=1.0):
     if alpha < 1e-5:
         return mse_loss
     
-    # 単調増加制約のペナルティを計算
+    # Calculate the penalty for the monotonic increasing constraint
     penalty = monotonicity_penalty(predictions)
     
-    # 総損失を計算
+    # Calculate the total loss
     scale_factor = mse_loss.detach().mean()
     total_loss = mse_loss + alpha * scale_factor * penalty
     return total_loss
@@ -307,7 +304,6 @@ def run_simulation(
     file_result = outdir + '/result.csv'
     
     print(f'\nTarget: {target}')
-    # print(f'weight for monotonicity penalty: {weight_mono}')
     print(f'Monotonically increasing: {mono_increase}')
     print()
     
@@ -373,11 +369,12 @@ def run_simulation(
     
     model = make_model(out_dim, r_max=r_max, n_train=n_train, target=target)
     
-    # print(model)
-    # visualize_layers(model)
+    ## Visualize the model
+    figname = outdir + '/fig_model.png'
+    visualize_layers(model, figname=figname)
 
-    # ### Training
-    # The model is trained using a mean-squared error loss function with an Adam optimizer.
+    ### Training
+    # The model is trained using a mean-absolute error loss function with an Adam or AdamW optimizer.
     if optimizer.lower() == 'adam':
         opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif optimizer.lower() == 'adamw':
@@ -472,12 +469,7 @@ def run_simulation(
     figname = outdir + '/fig_loss.png'
     plot_loss_history(steps, loss_train, loss_valid, figname=figname)
     
-    #### Results
-    # We evaluate our model by visualizing the predicted and true DoS in each error quartile. 
-    # We further compare the hidden features learned for each node to the partial DoS
-    
-    # predict on all data
-    # model.load_state_dict(torch.load(file_model, weights_only=True, map_location=device)['state'])
+    ## load pre-trained model
     history = torch.load(file_model, weights_only=True, map_location=device)['history']
     model.load_state_dict(torch.load(file_model, weights_only=True, map_location=device)['best'])
     model.pool = True
@@ -492,7 +484,6 @@ def run_simulation(
     model.eval()
     with torch.no_grad():
         i0 = 0
-        # for i, d in tqdm(enumerate(dataloader), total=len(dataloader), bar_format=bar_format):
         for i, d in enumerate(dataloader):
             
             d.to(device)

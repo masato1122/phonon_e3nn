@@ -19,17 +19,16 @@ num_epochs_limit=1000
 patience=50
 
 ###################
-##id=19
+##lr_init=0.005
+##lr_min=0.0005
+gamma=0.90
 #
-lr=0.002
-gamma=0.95
-lr_min=0.0005
-#
-batch=32
-weight_decay=0.03
+batch=16
+weight_decay=0.01
+optimizer=adamw
 ###################
 
-for seed in `seq 1 5`; do
+for seed in `seq 11 20`; do
 for num_data in -1 3000 1000 300 100; do
 
 if [ $num_data -lt 1001 ]; then
@@ -37,6 +36,17 @@ if [ $num_data -lt 1001 ]; then
 else
     nprocs=1
 fi
+
+############################################
+#lr_init=0.01
+if [ $num_data == -1 ]; then
+    lr_init=`echo "5.0 / 6000." | bc -l`
+    lr_min=`echo "1.0 / 6000." | bc -l`
+else
+    lr_init=`echo "5.0 / $num_data" | bc -l`
+    lr_min=`echo "1.0 / $num_data" | bc -l`
+fi
+############################################
 
 jobname=j${label}${id}_${num_data}-${seed}
 
@@ -71,10 +81,11 @@ for i in \`seq 1 $nloop\`; do
         --patience         $patience \\
         --nprocs   ${nprocs} \\
         --batch_size   $batch \\
-        --lr           $lr \\
+        --lr           $lr_init \\
         --lr_min       $lr_min \\
         --weight_decay $weight_decay \\
-        --gamma        $gamma 
+        --gamma        $gamma \\
+        --optimizer    $optimizer
     
 done
 EOF

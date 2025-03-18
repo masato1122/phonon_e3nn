@@ -1,5 +1,29 @@
-
-# data pre-processing and visualization
+#
+# Created by : M. Ohnishi
+# Created on : February 06, 2025
+# 
+# MIT License
+# 
+# Copyright (c) 2024 Masato Ohnishi at The Institute of Statistical Mathematics
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 import os
 import sys
 import os.path
@@ -8,12 +32,11 @@ import pandas as pd
 import argparse
 import torch
 
-#sys.path.append('/home/ohnishi/work/apdb/All_data/dos_spectral/4_prediction/phonon_e3nn')
 from phonon_e3nn.prediction import run_simulation
 
-## Clean data
 def clean_data(df, tol1={'gap': 10, 'kappa': 500}, tol2={'kappa': 2000}):
-    
+    """ Remove materials with large phonon gap (>=10) and large thermal conductivity (>= 500), 
+    and excessive thermal conductivity (>=2000). """    
     n0 = len(df)
     
     ## Remove too large gap and kappa
@@ -33,16 +56,21 @@ def main(options):
     print(" START")
     print("")
     
+    ## Set number of threads for CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if options.nprocs is not None:
-        torch.set_num_threads(options.nprocs)
+        if device.type == 'cpu':
+            torch.set_num_threads(options.nprocs)
     
+    ## Check data file
     if os.path.exists(options.file_data) == False:
         print(" %s not found" % options.file_data)
         sys.exit()
-
+    
+    ## Prepare output directory
     os.makedirs(options.outdir, exist_ok=True)
     
-    ### "num_data" is changed to observe the scaling law
+    ## "num_data" is changed to observe the scaling behavior
     if options.num_data == -1:
         num_data = None
     else:
@@ -50,6 +78,7 @@ def main(options):
     
     ## Load data
     df_raw = pd.read_csv(options.file_data)
+    norig = len(df_raw)
     df_raw = df_raw[(df_raw['fc2_error'] < 0.1) & (df_raw['fc3_error'] < 0.1)]
     
     if options.which_relax == 'both':
@@ -62,11 +91,9 @@ def main(options):
         print("Unknown relax_type")
         sys.exit()
     
-    if len(df_raw) < 1000:
-        print("Too small data size", len(df_raw))
-        sys.exit()
-    
-    norig = len(df_raw)
+    # if len(df_raw) < 1000:
+    #     print("Too small data size", len(df_raw))
+    #     sys.exit()
     
     ## Clean data
     df_raw = clean_data(df_raw)
@@ -95,8 +122,7 @@ def main(options):
     ## Reset index
     df_raw = df_raw.reset_index(drop=True)
     
-    
-    ### alpha : weight for monotonicity penalty
+    ## alpha : weight for monotonicity penalty
     if 'cumu' in options.target.lower():
         mono_increase = True
         alpha = options.gradient_weight
@@ -113,7 +139,7 @@ def main(options):
     run_simulation(
         df_raw,
         seed=options.seed,
-        target=options.target,  # 'kspec_norm', 'kspec_mfp'
+        target=options.target,  # 'kspec_norm' or 'kspec_mfp'
         outdir=options.outdir,
         r_max=options.r_max,
         valid_size=options.valid_size,
@@ -135,9 +161,9 @@ def main(options):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Input parameters')
-
+    
     parser.add_argument('--nprocs', dest='nprocs', type=int,
-                        default=1, help="nprocs [1]")
+                        default=None, help="nprocs [None]")
 
     parser.add_argument('--file_data', dest='file_data', type=str,
                         default="../1_get/data_all.csv", help="data file name")
@@ -157,7 +183,7 @@ if __name__ == '__main__':
                         default=None, help="output directory [./out]")
     
     parser.add_argument('--seed', dest='seed', type=int,
-                        default=12, help="seed [12]")
+                        default=42, help="seed [42]")
 
     parser.add_argument('--r_max', dest='r_max', type=float,
                         default=4.0, help="r_max [4.0]")
@@ -168,7 +194,7 @@ if __name__ == '__main__':
                         default=0.1, help="test_size [0.1]")
     
     parser.add_argument('--batch_size', dest='batch_size', type=int,
-                        default=32, help="batch_size [32]")
+                        default=16, help="batch_size [16]")
     parser.add_argument('--num_epochs', dest='num_epochs', type=int,
                         default=3, help="num_epochs [3]")
     parser.add_argument('--num_epochs_limit', dest='num_epochs_limit', type=int,

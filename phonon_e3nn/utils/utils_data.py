@@ -1,8 +1,32 @@
-# import sys
+#
+# Original code: https://github.com/ninarina12/phononDoS_tutorial
+# Modified by M. Ohnishi
+# Modified on February 06, 2025
+# 
+# MIT License
+# 
+# Copyright (c) 2024 Masato Ohnishi at The Institute of Statistical Mathematics
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 import torch
-# import torch_geometric as tg
 
-# data pre-processing
 import numpy as np
 import pandas as pd
 import ast
@@ -12,7 +36,6 @@ from scipy.stats import gaussian_kde
 
 # data visualization
 from ase import Atoms
-# from ase.visualize.plot import plot_atoms
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -511,123 +534,3 @@ def plot_predictions_mod(df, idx, title=None,
     fig.savefig(figname, dpi=dpi, bbox_inches='tight')
     print(' Output', figname)
 
-# def plot_predictions(df, idx, title=None, xcol='phfreq', target='phdos'):
-    
-#     # get quartiles
-#     i_mse = np.argsort(df.iloc[idx]['mse'])
-#     ds = df.iloc[idx].iloc[i_mse][['formula', target, target+'_pred', 'mse']].reset_index(drop=True)
-#     quartiles = np.quantile(ds['mse'].values, (0.25, 0.5, 0.75, 1.))
-#     iq = [0] + [np.argmin(np.abs(ds['mse'].values - k)) for k in quartiles]
-    
-#     ncol = 7
-#     nrow = min(4, int(len(idx)//ncol))
-    
-#     ### old vererson
-#     #s = np.concatenate([np.sort(np.random.choice(np.arange(iq[k-1], iq[k], 1), size=n, replace=False)) for k in range(1,5)])
-    
-#     ### new version
-#     s = []
-#     for k in range(1, 5):
-#         population = np.arange(iq[k-1], iq[k], 1)
-#         sample_size = min(ncol, len(population))
-#         s.append(np.sort(np.random.choice(population, size=sample_size, replace=False)))
-#     s = np.concatenate(s)
-    
-#     x = df.iloc[0][xcol]
-
-#     fig, axs = plt.subplots(nrow, ncol+1, figsize=(13,3.5), gridspec_kw={'width_ratios': [0.7] + [1]*ncol})
-#     gs = axs[0,0].get_gridspec()
-    
-#     # remove the underlying axes
-#     for ax in axs[:,0]:
-#         ax.remove()
-
-#     # add long axis
-#     axl = fig.add_subplot(gs[:,0])
-
-#     # plot quartile distribution
-#     y_min, y_max = ds['mse'].min(), ds['mse'].max()
-#     y = np.linspace(y_min, y_max, 500)
-#     kde = gaussian_kde(ds['mse'])
-#     p = kde.pdf(y)
-#     axl.plot(p, y, color='black')
-#     cols = [palette[k] for k in [2,0,1,3]][::-1]
-#     qs =  list(quartiles)[::-1] + [0]
-#     for i in range(len(qs)-1):
-#         axl.fill_between([p.min(), p.max()], y1=[qs[i], qs[i]], y2=[qs[i+1], qs[i+1]], color=cols[i], lw=0, alpha=0.5)
-#     axl.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
-#     axl.invert_yaxis()
-#     axl.set_xticks([])
-#     axl.set_ylabel('MSE')
-
-#     # import sys
-#     # print(len(s), ncol)
-    
-#     fontsize = 12
-#     cols = np.repeat(cols[::-1], ncol)
-#     axs = axs[:,1:].ravel()
-#     for k in range(4*ncol):
-#         ax = axs[k]
-#         i = s[k]
-#         ax.plot(x, ds.iloc[i][target], color='black')
-#         ax.plot(x, ds.iloc[i][target+'_pred'], color=cols[k])
-#         ax.set_xticks([])
-#         ax.set_yticks([])
-#         ax.set_title(ds.iloc[i]['formula'].translate(sub), fontsize=fontsize, y=0.95)
-        
-#         if k == len(s) - 1:
-#             break
-        
-#     fig.tight_layout()
-#     fig.subplots_adjust(hspace=0.6)
-#     if title: fig.suptitle(title, ha='center', y=1., fontsize=fontsize + 4)
-
-
-# def plot_partials(model, df, idx, device='cpu'):
-#     # randomly sample r compounds from the dataset
-#     r = 6
-#     ids = np.random.choice(df.iloc[idx][df.iloc[idx]['pdos'].str.len()>0].index.tolist(), size=r, replace=False)
-    
-#     # initialize figure axes
-#     N = df.iloc[ids]['species'].str.len().max()
-#     fig, ax = plt.subplots(r, N+1, figsize=(2.4*(N+1),1.2*r), sharex=True, sharey=True)
-
-#     # predict output of each site for each sample
-#     for row, i in enumerate(ids):
-#         entry = df.iloc[i]
-#         d = tg.data.Batch.from_data_list([entry.data])
-
-#         model.eval()
-#         with torch.no_grad():
-#             d.to(device)
-#             output = model(d).cpu().numpy()
-
-#         # average contributions from the same specie over all sites
-#         n = len(entry.species)
-#         pdos = dict(zip(entry.species, [np.zeros((output.shape[1])) for k in range(n)]))
-#         for j in range(output.shape[0]):
-#             pdos[entry.data.symbol[j]] += output[j,:]
-
-#         for j, s in enumerate(entry.species):
-#             pdos[s] /= entry.data.symbol.count(s)
-
-#         # plot total DoS
-#         ax[row,0].plot(entry.phfreq, entry.target, color='black')
-#         ax[row,0].plot(entry.phfreq, entry.target_pred, color=palette[0])
-#         ax[row,0].set_title(entry.formula.translate(sub), fontsize=fontsize - 2, y=0.99)
-#         ax[row,0].set_xticks([]); ax[row,0].set_yticks([])
-
-#         # plot partial DoS
-#         for j, s in enumerate(entry.species):
-#             ax[row,j+1].plot(entry.phfreq, entry.pdos[s], color='black')
-#             ax[row,j+1].plot(entry.phfreq, pdos[s]/pdos[s].max(), color=palette[1], lw=2)
-#             ax[row,j+1].set_title(s, fontsize=fontsize - 2, y=0.99)
-#             ax[row,j+1].set_xticks([]); ax[row,j+1].set_yticks([])
-
-#         for j in range(len(entry.species) + 1, N+1):
-#             ax[row,j].remove()
-
-#     try: fig.supylabel('Intensity', fontsize=fontsize, x=0.08)
-#     except: pass
-#     else: fig.supxlabel('Frequency', fontsize=fontsize, y=0.06)
-#     fig.subplots_adjust(hspace=0.8)
