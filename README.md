@@ -30,7 +30,7 @@ sh run_example.sh
 
 ## Citation
 
-If you use the anharmonic phonon data from this repository, which is stored in `./phonon_e3nn/DATA`, please cite the following paper:
+If you use the phonon data from this repository, which is stored in `./phonon_e3nn/DATA`, please cite the following paper:
 
 - **Phonon Data:** M. Ohnishi et al., arXiv:**** (2025).
 

@@ -401,11 +401,14 @@ def plot_example(
         edge_color='gray')
     
     if label_edges:
-        nx.draw_networkx_edge_labels(
-            g, ax=ax[1], edge_labels=edge_labels, pos=pos, 
-            font_family=font_family, font_size=fontsize,
-            label_pos=0.5,
-            bbox=dict(facecolor='white', edgecolor='none', alpha=0.8, pad=1.0))
+        try:
+            nx.draw_networkx_edge_labels(
+                g, ax=ax[1], edge_labels=edge_labels, pos=pos, 
+                font_family=font_family, font_size=fontsize,
+                label_pos=0.5,
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.8, pad=1.0))
+        except Exception as e:
+            print("Error drawing edge labels:", e)
     
     # format axes
     ax[0].set_xlabel(r'$x_1\ (\AA)$')
