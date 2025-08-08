@@ -56,8 +56,7 @@ font_family = 'sans-serif'
 sub = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 float_columns = ['kp', 'kc', 'klat', 'max_gap', 'max_phfreq', 'log_kp', 'log_kc', 'log_klat']
-list_column = ['gaps', 'kcumu_sectinons', 
-               'phfreq', 'phdos', 
+list_column = ['kcumu_sectinons', 'phfreq', 'phdos', 
                'kspec', 'kcumu', 'kspec_norm', 'kcumu_norm',
                'kspec_freq', 'kcumu_freq', 'kspec_norm_freq', 'kcumu_norm_freq',
                'mfp', 'log_mfp', 
@@ -79,11 +78,11 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def load_data(filename, target='phdos', num_data=None, seed=42, verbose=True):
+def load_phonon_data(filename, target='phdos', verbose=True):
     df = pd.read_csv(filename)
-    if num_data is not None:
-        df = df.sample(num_data, random_state=seed).reset_index(True)
-    return set_data(df, target=target, verbose=verbose)
+    # if num_data is not None:
+    #     df = df.sample(num_data, random_state=seed).reset_index(True)
+    return set_phonon_data(df, target=target, verbose=verbose)
 
 def load_prediction_data(filename, verbose=False):
     ## Get target column name
@@ -97,22 +96,37 @@ def load_prediction_data(filename, verbose=False):
             print(targets, 'found in dataframe.')
         target = targets[0]
     # print(filename)
-    df, _ = load_data(filename, target=target, verbose=verbose)
+    df = load_phonon_data(filename, target=target, verbose=verbose)
     return df, target
 
-def set_data(df, target='phdos', verbose=True):
+def set_phonon_data(df, target='phdos', verbose=True):
     """ Set preprocess data """
+    
+    ## Remove invalid data
+    indices_removed = {}
+    for i in range(len(df)):
+        for col in df.columns:
+            if 'nan' in str(df[col].values[i]):
+                if col not in indices_removed:
+                    indices_removed[col] = []
+                indices_removed[col].append(i)
+    all_ids_remove = set.union(*[set(v) for v in indices_removed.values()]) if indices_removed else set()
+    df = df.drop(index=all_ids_remove)
+    df = df.reset_index(drop=True)
+    print("\n Remove invalid data:")
+    for col in indices_removed:
+        mpids = [df['mp_id'].values[i] for i in indices_removed[col]]
+        print(f" - {col}", ", ".join(map(str, mpids)))
+
     # derive formula and species columns from structure
     try:
         # structure provided as Atoms object
         df['structure'] = df['structure'].apply(eval).progress_map(lambda x: Atoms.fromdict(x))
-    except:
-        # no structure provided
-        species = []
-    else:
         df['formula'] = df['structure'].map(lambda x: x.get_chemical_formula())
         df['species'] = df['structure'].map(lambda x: list(set(x.get_chemical_symbols())))
-        species = sorted(list(set(df['species'].sum())))
+    except:
+        raise ValueError("Structure data not found in dataframe. "
+                         "Please provide 'structure' column as Atoms object.")
     
     # convert columns to appropriate data types
     flag = False
@@ -144,11 +158,6 @@ def set_data(df, target='phdos', verbose=True):
     
     df = df.dropna(subset=[target])
     
-    # df_nan  = df[df.isna().any(axis=1)]
-    # for col in df_nan.columns:
-    #     print(col, type(df_nan[col].values), df_nan[col].values)
-    # # exit()
-    
     # NaNチェック
     if df.isnull().values.any():
         df_nan_rows = df[df.isna().any(axis=1)]
@@ -159,10 +168,13 @@ def set_data(df, target='phdos', verbose=True):
         if verbose:
             print("\nNaN not found")
     
-    return df, species
+    return df
 
 
-def train_valid_test_split(df, species, valid_size, test_size, seed=12, figname=None):
+def train_valid_test_split(df, valid_size, test_size, seed=12, figname=None):
+    
+    species = sorted(list(set(df['species'].sum())))
+    
     # perform an element-balanced train/valid/test split
     print('split train/dev ...')
     dev_size = valid_size + test_size

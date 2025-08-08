@@ -34,19 +34,38 @@ import torch
 
 from phonon_e3nn.prediction import run_simulation
 
-def clean_data(df, tol1={'gap': 10, 'kappa': 500}, tol2={'kappa': 2000}):
+def clean_data(df, tol1={'gap': 10, 'kappa': 500}, tol2={'kappa': 2000},
+               thred_fc2=0.1, thred_fc3=0.1):
     """ Remove materials with large phonon gap (>=10) and large thermal conductivity (>= 500), 
     and excessive thermal conductivity (>=2000). """    
-    n0 = len(df)
     
-    ## Remove too large gap and kappa
+    n0 = len(df)
+    print(" Number of original data : ", len(df))
+    
+    ## Remove large fc2 and fc3
+    df = df[(df['fc2_error'] < thred_fc2) & (df['fc3_error'] < thred_fc3)]
+    df = df.reset_index(drop=True)
+    if n0 != len(df):
+        print(f" - Removed {n0 - len(df)} rows with fc2_error>={thred_fc2} or fc3_error>={thred_fc3}")
+        n0 = len(df)
+    
+    ## Remove too large gap and kappa (large kappa due to absence of 4ph scattering)
+    n0 = len(df)
     df = df[~((df["max_gap"] >= tol1['gap']) & (df["kp"] >= tol1['kappa']))]
     df = df.reset_index(drop=True)
+    if n0 != len(df):
+        print(f" - Removed {n0 - len(df)} rows with gap>={tol1['gap']} and kappa>={tol1['kappa']}")
+        n0 = len(df)
     
-    ## Remove too small gap and kappa
+    ## Remove excessively large kappa
     df = df[~(df["kp"] >= tol2['kappa'])]
     df = df.reset_index(drop=True)
-    
+    if n0 != len(df):
+        print(f" - Removed {n0 - len(df)} rows with kappa>={tol2['kappa']}")
+        n0 = len(df)
+
+    print(" Number of available data : ", len(df))
+
     return df
 
 def main(options):
@@ -76,51 +95,46 @@ def main(options):
     else:
         num_data = options.num_data        # None or integer
     
-    ## Load data
-    df_raw = pd.read_csv(options.file_data)
-    norig = len(df_raw)
-    df_raw = df_raw[(df_raw['fc2_error'] < 0.1) & (df_raw['fc3_error'] < 0.1)]
+    ### Load phonon data
+    from phonon_e3nn.utils.utils_data import load_phonon_data
+    df_phonon = load_phonon_data(options.file_data, target=options.target)
     
     if options.which_relax == 'both':
         pass
     elif options.which_relax == 'normal':
-        df_raw = df_raw[df_raw['relax_type'] == 'normal']
+        df_phonon = df_phonon[df_phonon['relax_type'] == 'normal']
     elif options.which_relax == 'strict':
-        df_raw = df_raw[df_raw['relax_type'] == 'strict']
+        df_phonon = df_phonon[df_phonon['relax_type'] == 'strict']
     else:
         print("Unknown relax_type")
         sys.exit()
     
-    # if len(df_raw) < 1000:
-    #     print("Too small data size", len(df_raw))
-    #     sys.exit()
-    
     ## Clean data
-    df_raw = clean_data(df_raw)
+    df_phonon = clean_data(df_phonon)
     
     ## Add log data
     if options.target == 'log_kp':
-        df_raw['log_kp'] = np.log10(df_raw['kp'])
+        df_phonon['log_kp'] = np.log10(df_phonon['kp'])
     elif options.target == 'log_kc':
-        df_raw['log_kc'] = np.log10(df_raw['kc'])
+        df_phonon['log_kc'] = np.log10(df_phonon['kc'])
     elif options.target == 'log_klat':
-        df_raw['log_klat'] = np.log10(df_raw['klat'])
+        df_phonon['log_klat'] = np.log10(df_phonon['klat'])
     
     ## Drop NaN
-    df_raw = df_raw.dropna(subset=[options.target])
-    navail = len(df_raw)
+    df_phonon = df_phonon.dropna(subset=[options.target])
+    navail = len(df_phonon)
     
-    print()
-    print(f'Number of original data  : {norig}')
-    print(f"Number of available data : {navail}")
+    # print()
+    # print(f'Number of original data  : {norig}')
+    # print(f"Number of available data : {navail}")
     
     ## Sample data
     if num_data is not None:
-        df_raw = df_raw.sample(n=num_data, random_state=options.seed)
-        print(f"Number of sampled data   : {len(df_raw)}")
+        df_phonon = df_phonon.sample(n=num_data, random_state=options.seed)
+        print(f"Number of sampled data   : {len(df_phonon)}")
     
     ## Reset index
-    df_raw = df_raw.reset_index(drop=True)
+    df_phonon = df_phonon.reset_index(drop=True)
     
     ## alpha : weight for monotonicity penalty
     if 'cumu' in options.target.lower():
@@ -137,7 +151,7 @@ def main(options):
     print('===============================')
     print()
     run_simulation(
-        df_raw,
+        df_phonon,
         seed=options.seed,
         target=options.target,  # 'kspec_norm' or 'kspec_mfp'
         outdir=options.outdir,
