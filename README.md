@@ -2,7 +2,7 @@
 
 This repository provides anharmonic phonon property dataset obtained with first-principles calculations 
 and Python scripts for machine learning predictions. 
-These data and code were used in arXiv:***** (2025).
+These data and code were used in arXiv:2504.21245 (2025).
 
 ## How to Obtain the Data and Code
 
@@ -16,7 +16,7 @@ cd phonon_e3nn
 ## Anharmonic phonon dataset
 
 The anharmonic phonon dataset can be found in `./phonon_e3nn/DATA/data_all.csv`, 
-which contains phonon data for over 6,000 materials. 
+which contains phonon data for approximately 7,000 materials.
 This dataset is used for anharmonic phonon analysis.
 
 ## How to Use
@@ -32,7 +32,7 @@ sh run_example.sh
 
 If you use the phonon data from this repository, which is stored in `./phonon_e3nn/DATA`, please cite the following paper:
 
-- **Phonon Data:** M. Ohnishi et al., arXiv:**** (2025).
+- **Phonon Data:** M. Ohnishi et al., arXiv:2504.21245 (2025).
 
 If you use the Python scripts for machine learning predictions, please cite the following papers in addition to the above paper:
 
@@ -42,4 +42,3 @@ If you use the Python scripts for machine learning predictions, please cite the 
 [GitHub2](https://github.com/ninarina12/phononDoS_tutorial)
 
 - **E(3)NN:** M. Geiger and T. Smidt, e3nn: Euclidean Neural Networks, arXiv:2207.09453 (2022).
-
