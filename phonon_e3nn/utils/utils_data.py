@@ -117,7 +117,8 @@ def set_phonon_data(df, target='phdos', verbose=True):
     for col in indices_removed:
         mpids = [df['mp_id'].values[i] for i in indices_removed[col]]
         print(f" - {col}", ", ".join(map(str, mpids)))
-
+    print()
+    
     # derive formula and species columns from structure
     try:
         # structure provided as Atoms object

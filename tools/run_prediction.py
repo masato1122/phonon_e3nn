@@ -70,11 +70,6 @@ def clean_data(df, tol1={'gap': 10, 'kappa': 500}, tol2={'kappa': 2000},
 
 def main(options):
 
-    print("")
-    print("")
-    print(" START")
-    print("")
-    
     ## Set number of threads for CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if options.nprocs is not None:
@@ -97,8 +92,13 @@ def main(options):
     
     ### Load phonon data
     from phonon_e3nn.utils.utils_data import load_phonon_data
+    print("\n Load %s" % options.file_data)
     df_phonon = load_phonon_data(options.file_data, target=options.target)
     
+    ## Clean data
+    df_phonon = clean_data(df_phonon)
+
+    ## Relaxation type
     if options.which_relax == 'both':
         pass
     elif options.which_relax == 'normal':
@@ -109,9 +109,6 @@ def main(options):
         print("Unknown relax_type")
         sys.exit()
     
-    ## Clean data
-    df_phonon = clean_data(df_phonon)
-    
     ## Add log data
     if options.target == 'log_kp':
         df_phonon['log_kp'] = np.log10(df_phonon['kp'])
@@ -120,18 +117,10 @@ def main(options):
     elif options.target == 'log_klat':
         df_phonon['log_klat'] = np.log10(df_phonon['klat'])
     
-    ## Drop NaN
-    df_phonon = df_phonon.dropna(subset=[options.target])
-    navail = len(df_phonon)
-    
-    # print()
-    # print(f'Number of original data  : {norig}')
-    # print(f"Number of available data : {navail}")
-    
     ## Sample data
     if num_data is not None:
         df_phonon = df_phonon.sample(n=num_data, random_state=options.seed)
-        print(f"Number of sampled data   : {len(df_phonon)}")
+        print(f" Number of sampled data   : {len(df_phonon)}")
     
     ## Reset index
     df_phonon = df_phonon.reset_index(drop=True)
