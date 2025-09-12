@@ -41,4 +41,4 @@ If you use the Python scripts for machine learning predictions, please cite the 
 [GitHub1](https://github.com/zhantaochen/phonondos_e3nn), 
 [GitHub2](https://github.com/ninarina12/phononDoS_tutorial)
 
-- **E(3)NN:** M. Geiger and T. Smidt, e3nn: Euclidean Neural Networks, arXiv:2207.09453 (2022).
+- e*E(3)nn:** M. Geiger and T. Smidt, e3nn: Euclidean Neural Networks, arXiv:2207.09453 (2022).
