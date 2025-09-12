@@ -29,12 +29,12 @@ import numpy as np
 import pandas as pd
 import argparse
 
-from phonon_e3nn.utils.utils_data import set_data, plot_predictions_mod
+from phonon_e3nn.utils.utils_data import set_phonon_data, plot_predictions_mod
 
 def main(options):
     
     df_raw = pd.read_csv(options.filename)
-    df, _ = set_data(df_raw, target=options.target)
+    df = set_phonon_data(df_raw, target=options.target)
     df = df.reset_index(drop=True)
     
     print(df)

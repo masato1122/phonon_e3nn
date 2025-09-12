@@ -33,7 +33,7 @@ import argparse
 import glob
 
 from scipy.stats import bootstrap
-from scipy.optimize import curve_fit
+# from scipy.optimize import curve_fit
 
 import matplotlib
 matplotlib.use('Agg')
@@ -61,7 +61,6 @@ def _get_error_data(filenames, col_error='mae_valid'):
             dfs.append(df[imin:imin+1])
     df = pd.concat(dfs).reset_index(drop=True)
     return df
-
 
 def plot_scaling(
     ax, df, xcol='num_data', ycol='mse', ratio_train=0.8,
@@ -273,14 +272,14 @@ def generate_logscale_list(v0, v1):
     values = []
     power = -2
     while True:
-        base = 10 ** power  # 10^power の値を生成
-        for i in range(2, 10):  # 2, 3, ..., 9 を掛ける
+        base = 10 ** power
+        for i in range(2, 10):
             num = i * base
             if num > v1:
-                return values  # v1を超えたら終了
+                return values
             if num >= v0:
                 values.append(num)
-        power += 1  # 次の桁へ移動
+        power += 1
         
 def modify_xaxis_for_mfp(ax, log_values):
     
@@ -326,7 +325,11 @@ def modify_xaxis_for_mfp(ax, log_values):
 def main(options):
     
     loss_type = 'mae'
-    
+    if options.ylabel is None:
+        ylabel = loss_type.upper()
+    else:
+        ylabel = options.ylabel
+
     cmap = plt.get_cmap("tab10")
     
     fig, axl, axes_right = make_frame(
@@ -346,7 +349,7 @@ def main(options):
         axl, df_scale, 
         xcol=xcol, ycol=loss_type, 
         ratio_train=ratio_train, 
-        ylabel=loss_type.upper())
+        ylabel=ylabel)
     
     ### Set axis range
     def _set_axis_range(ax, values, which='x', scale='linear', buffer=0.1):
@@ -417,11 +420,11 @@ def main(options):
     ycol = loss_type+'_mean'
     
     if len(df_scale) <= 4:
-        n0 = 0
-        n1 = 1
+        n0, n1 = 0, 1
     else:
-        n0 = 0
-        n1 = 2
+        n0, n1 = 0, 2
+    
+    col_indices = [3, 1, 0]
     n2 = -1
     for i, idx_num in enumerate([n0, n1, n2]):
         
@@ -458,11 +461,9 @@ def main(options):
             #################
             # break
             #################
-        
-        elif i == 1:
-            col = cmap(1)
-        else:
-            col = cmap(0)
+
+        # col = cmap(1) if i == 1 else cmap(0)
+        col = cmap(col_indices[i])
         
         ## plot an example
         isort = np.argsort(abs(df_pred[loss_type] - error_mean))
@@ -473,10 +474,19 @@ def main(options):
         
         target = [col for col in df_pred.columns if '_pred' in col][0].replace('_pred', '')
         
+        ## find a visually-nice result (ymin < 0.2)
+        if target.startswith('kcumu'):
+            count = 0
+            while True:
+                ydat = np.asarray(df_pred[target].values[isort[count]])
+                if np.min(ydat) < 0.2:
+                    inear = isort[count]
+                    break
+                count += 1
+        
         plot_prediction_single(
             axes_right[i], df_pred.iloc[inear], lw=1.0, col_pred=col, 
             loss_type=loss_type)
-        
         
         if 'kspec' in target.lower() and i == 2:
             set_legend(ax, fs=5, loc='upper right', alpha=0.0, lw=0.0)
@@ -520,23 +530,6 @@ def main(options):
             else:
                 ax.set_xlabel(xlabel)
     ### <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    
-    ### y-axis
-    # target = [col for col in df_pred.columns if '_pred' in col][0].replace('_pred', '')
-    # if 'kcumu' in target.lower():
-    #     ylim[0] = 0.007
-    #     axl.set_ylim(ylim)
-    #     set_axis(axl, yscale='log', xscale='log')
-    # else:
-    #     # ylim[0] = 0.006
-    #     # axl.set_ylim(ylim)
-    #     set_axis(axl, yscale='linear', xscale='log')
-    
-    # if 'kspec' in target.lower():
-    #     axl.set_ylim(ymin=0.037)
-    #     set_axis(axl, yscale='linear', xscale='log', yticks=0.005, myticks=5)
-    # elif 'kcumu' in target.lower():
-    #     set_axis(axl, yscale='linear', xscale='log', yticks=0.02, myticks=2)
     
     ### >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     ### Save figure

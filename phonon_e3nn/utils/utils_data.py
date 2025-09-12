@@ -35,7 +35,7 @@ from sklearn.model_selection import train_test_split
 from scipy.stats import gaussian_kde
 
 # data visualization
-from ase import Atoms
+import ase
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -78,6 +78,11 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def save_phonon_data(df, filename):
+    
+    df.to_csv(filename, index=False)
+
+
 def load_phonon_data(filename, target='phdos', verbose=True):
     df = pd.read_csv(filename)
     # if num_data is not None:
@@ -113,21 +118,23 @@ def set_phonon_data(df, target='phdos', verbose=True):
     all_ids_remove = set.union(*[set(v) for v in indices_removed.values()]) if indices_removed else set()
     df = df.drop(index=all_ids_remove)
     df = df.reset_index(drop=True)
-    print("\n Remove invalid data:")
-    for col in indices_removed:
+    for i, col in enumerate(indices_removed):
+        if i == 0:
+            print("\n Remove invalid data:")
         mpids = [df['mp_id'].values[i] for i in indices_removed[col]]
         print(f" - {col}", ", ".join(map(str, mpids)))
-    print()
+    if len(indices_removed) > 0:
+        print()
     
     # derive formula and species columns from structure
-    try:
-        # structure provided as Atoms object
-        df['structure'] = df['structure'].apply(eval).progress_map(lambda x: Atoms.fromdict(x))
+    # structure provided as Atoms object
+    if isinstance(df['structure'].values[0], str) and not df['structure'].values[0].startswith('Atoms'):
+        df['structure'] = df['structure'].apply(ast.literal_eval).progress_map(lambda x: ase.Atoms.fromdict(x))
         df['formula'] = df['structure'].map(lambda x: x.get_chemical_formula())
         df['species'] = df['structure'].map(lambda x: list(set(x.get_chemical_symbols())))
-    except:
-        raise ValueError("Structure data not found in dataframe. "
-                         "Please provide 'structure' column as Atoms object.")
+    # else:
+    #     raise ValueError("Structure data not found in dataframe. "
+    #                      "Please provide 'structure' column as Atoms object.")
     
     # convert columns to appropriate data types
     flag = False
