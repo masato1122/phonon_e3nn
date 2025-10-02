@@ -34,7 +34,6 @@ If you use the phonon data from this repository, which is stored in `./phonon_e3
 
 - `**Phonon Data**<https://arxiv.org/abs/2504.21245>`_: M. Ohnishi et al., arXiv:2504.21245 (2025).
 
-
 If you use the Python scripts for machine learning predictions, please cite the following papers in addition to the above paper:
 
 - **Original Code**: Z. Chen et al., Direct Prediction of Phonon Density of States With Euclidean Neural Networks, Adv. Sci. 8, 2004214 (2021). 
