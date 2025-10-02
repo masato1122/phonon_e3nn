@@ -34,11 +34,12 @@ If you use the phonon data from this repository, which is stored in `./phonon_e3
 
 - **Phonon Data:** M. Ohnishi et al., arXiv:2504.21245 (2025).
 
+
 If you use the Python scripts for machine learning predictions, please cite the following papers in addition to the above paper:
 
-- **Original Code:** Z. Chen et al., Direct Prediction of Phonon Density of States With Euclidean Neural Networks, Adv. Sci. 8, 2004214 (2021). 
+- **Original Code**: Z. Chen et al., Direct Prediction of Phonon Density of States With Euclidean Neural Networks, Adv. Sci. 8, 2004214 (2021). 
 [Journal](https://onlinelibrary.wiley.com/doi/10.1002/advs.202004214), 
 [GitHub1](https://github.com/zhantaochen/phonondos_e3nn), 
 [GitHub2](https://github.com/ninarina12/phononDoS_tutorial)
 
-- e*E(3)nn:** M. Geiger and T. Smidt, e3nn: Euclidean Neural Networks, arXiv:2207.09453 (2022).
+- **E(3)nn**: M. Geiger and T. Smidt, e3nn: Euclidean Neural Networks, arXiv:2207.09453 (2022).
